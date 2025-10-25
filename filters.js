@@ -15,6 +15,7 @@ const pagesRepositories = [
     { name: 'Color-Master', url: 'https://trex159.github.io/Color-Master', displayname: 'Farbraten' },
     { name: 'EnigmaM3', url: 'https://trex159.github.io/EnigmaM3', displayname: 'Enigma' },
     { name: 'Passwortsicherheitstester', url: 'https://trex159.github.io/Passwortsicherheitstester', displayname: 'Passwort-Sicherheit testen' },
+    { name: 'hng', url: 'https://trex159.github.io/hng', displayname: 'Hungergames Simulator' }
 ];
 
 // Returns the repositories to display based on the mode
