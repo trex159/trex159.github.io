@@ -354,6 +354,13 @@ footer a {
   text-decoration: none;
 }
 
+.invis {
+  color: var(--background);
+  height: 1px;
+  width: 1px;
+  font-size: 1px;
+}
+
 footer a:hover {
   text-decoration: underline;
 }
