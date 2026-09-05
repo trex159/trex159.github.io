@@ -1,230 +1,327 @@
-/*
-Plan:
-Passwort aus id="passwordInput" holen und als Variable speichern
-Wenn der nutzer is in einem Testfeld eingibt, sollen die eingaben live mit dem gesetzten Passwort verglichen werden.
-Wenn der nutzer einen Fehler macht, wird das feld rot, auch im Hintergrund. Wenn das Richitge passwort drinnen steht, blinkt es kurz grün und leert sich autopmatisch.
-Die Zeit wird immer live gemessen und die Fehlerquote live angezeigt (1 Fehler = 1 Falscher versuch, nicht 1 falsches Zeichen).
-Der einzige Unterschied zwischen test 1 und 2 is, dass man in test 1 das passwort sieht und in test 2 nicht.
+// Theme handling
+const theme = localStorage.getItem('theme') || 
+  (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+document.documentElement.setAttribute('data-theme', theme);
 
-			<div class="test1">
-				<h1>Tippe dein Passwort Schnell</h1>
-				<input type="text" id="test1_txt" placeholder="Hier dein Passwort eingeben">
-				<p class="info">Tippe dein Passwort so schnell wie möglich. Du kannst es auch blind tippen.</p>
-				<p class="info" id="statistics1">Fehlerquote: X%<br>Tempo: X PPM (passwords per minute)</p>
-				<p class="info" id="bewertung1">Du kannst es X tippen</p>
-			</div>
-			<div class="test2">
-				<h1>Tippe dein Passwort Schnell</h1>
-				<input type="password" id="test2_txt" placeholder="Hier dein Passwort eingeben">
-				<p class="info">Tippe dein Passwort blind so schnell wie möglich. Du kannst es auch blind tippen.</p>
-				<p class="info" id="statistics2">Fehlerquote: X%<br>Tempo: X PPM (passwords per minute)</p>
-				<p class="info" id="bewertung2">Du kannst es X tippen</p>
-			</div>
+document.getElementById('themeToggle').addEventListener('click', () => {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('theme', newTheme);
+});
 
-WICHTIG: Der cursor muss aktive im textfeld bleiben, auch wenn es sich leert oder fehler gibt, um ein schnelles durchgängiges training zu ermöglihen ohne unterbrechungen.
-*/
-//Setup
-const pswdIp = document.getElementById("passwordInput");
-const t1Ip = document.getElementById("test1_txt");
-const t2Ip = document.getElementById("test2_txt");
-const reset = document.getElementById("resetButton");
-const sts = document.getElementById("statshow");
-let pswd = pswdIp.value;
-let startTime1 = null;
-let startTime2 = null;
-let typedPwd1 = 0;
-let typedPwd2 = 0;
-let erroractive2 = false;
-let erroractive1 = false;
-let error1 = 0;
-let error2 = 0;
-let totalErrors1 = 0;
-let totalErrors2 = 0;
-let rating1 = "";
-let rating2 = "";
-let activetrain = 0; // 1 = test1, 2 = test2
-let stats1 = [];
-let stats2 = [];
+// GitHub API integration
+const username = 'trex159';
+const API_BASE_URL = 'https://api.github.com';
+let repositories = [];
+let filteredRepos = [];
+let displayMode = localStorage.getItem('displayMode') || 'pages'; // 'pages' oder 'all'
 
-function updateLiveStats(testNumber) {
-	stsupd(testNumber);
+// Language colors for repository cards
+const languageColors = {
+  JavaScript: '#f1e05a',
+  TypeScript: '#3178c6',
+  Python: '#3572A5',
+  HTML: '#e34c26',
+  CSS: '#563d7c',
+  Java: '#b07219',
+  'C++': '#f34b7d',
+  C: '#555555',
+  Ruby: '#701516',
+  PHP: '#4F5D95',
+  Go: '#00ADD8',
+  Rust: '#dea584'
+};
+
+// Sprachunterstützung (i18n)
+const translations = {
+  de: {
+    title: "trex159 Repositories",
+    introTitle: "GitHub Repositories",
+    introText: "Entdecke alle öffentlichen Repositories von trex159. Dieses Dashboard aktualisiert sich automatisch und bleibt mit der neuesten GitHub-Aktivität synchron.",
+    searchPlaceholder: "Repositories durchsuchen...",
+    allLanguages: "Alle Sprachen",
+    sortUpdated: "Zuletzt aktualisiert",
+    sortStars: "Meiste Sterne",
+    sortName: "Name",
+    loading: "Lade Repositories...",
+    error: "Fehler beim Laden der Repositories",
+    tryAgain: "Erneut versuchen",
+    dataFetched: "Daten von GitHub API",
+    autoUpdate: "Automatisch alle 5 Minuten aktualisiert",
+    visitOnGitHub: "trex159 auf GitHub besuchen",
+    noDescription: "Keine Beschreibung vorhanden",
+    updated: "Aktualisiert",
+    stars: "⭐",
+    forks: "🔄"
+  },
+  en: {
+    title: "trex159 Repositories",
+    introTitle: "GitHub Repositories",
+    introText: "Explore all public repositories by trex159. This dashboard automatically updates to stay in sync with the latest GitHub activity.",
+    searchPlaceholder: "Search repositories...",
+    allLanguages: "All Languages",
+    sortUpdated: "Recently Updated",
+    sortStars: "Most Stars",
+    sortName: "Name",
+    loading: "Loading repositories...",
+    error: "Failed to load repositories",
+    tryAgain: "Try Again",
+    dataFetched: "Data fetched from GitHub's API",
+    autoUpdate: "Updated automatically every 5 minutes",
+    visitOnGitHub: "Visit trex159 on GitHub",
+    noDescription: "No description provided",
+    updated: "Updated",
+    stars: "⭐",
+    forks: "🔄"
+  }
+};
+
+let currentLang = localStorage.getItem('lang') || 'de';
+
+function t(key) {
+  return translations[currentLang][key];
 }
 
-function completeRun(testNumber, duration) {
-	const stats = testNumber === 1 ? stats1 : stats2;
-	const totalErrors = testNumber === 1 ? totalErrors1 : totalErrors2;
-	const ppm = duration > 0 ? 60 / duration : 0;
-	const errorRate = (totalErrors / (totalErrors + stats.length + 1)) * 100;
-	stats.push({
-		ppm: ppm,
-		errorRate: errorRate
-	});
-	stsupd();
+// Sprachumschalter
+function setupLanguageSwitcher() {
+  const langBtn = document.getElementById('langToggle');
+  langBtn.textContent = currentLang === 'de' ? 'English' : 'Deutsch';
+  langBtn.addEventListener('click', () => {
+    currentLang = currentLang === 'de' ? 'en' : 'de';
+    localStorage.setItem('lang', currentLang);
+    updateTexts();
+    filterAndDisplayRepositories();
+  });
 }
-// Passwort setzen
-pswdIp.addEventListener("input", function() {
-	pswd = pswdIp.value;
-})
-// Reset button
-reset.addEventListener("click", function() {
-	pswdIp.value = "";
-	t1Ip.value = "";
-	t2Ip.value = "";
-	pswd = "";
-	startTime1 = null;
-	startTime2 = null;
-	typedPwd1 = 0;
-	typedPwd2 = 0;
-	erroractive1 = false;
-	erroractive2 = false;
-	error1 = 0;
-	error2 = 0;
-	totalErrors1 = 0;
-	totalErrors2 = 0;
-	activetrain = 0;
-	stats1 = [];
-	stats2 = [];
-	t1Ip.style.backgroundColor = "";
-	t2Ip.style.backgroundColor = "";
-	stsupd();
-})
-//Test 1
-t1Ip.addEventListener("input", function() {
-	if (pswd == "") {
-		alert("Bitte setze zuerst ein Passwort in das obere Feld, bevor du den Test startest.");
-		t1Ip.value = "";
-		return;
-	}
-	if (startTime1 === null) {
-		startTime1 = new Date();
-		startTime2 = null;
-		typedPwd1 = 0;
-		typedPwd2 = 0;
-		error1 = 0;
-		erroractive1 = false;
-		activetrain = 1;
-	};
-	if (t1Ip.value === pswd && pswd !== "") {
-		const duration = (new Date() - startTime1) / 1000;
-		t1Ip.style.backgroundColor = "green";
-		t1Ip.value = "";
-		typedPwd1++;
-		completeRun(1, duration);
-		startTime1 = null;
-	}
-	// Auch sehen wenn das richtige passwort noch eingegeben wird, aber noch nicht fertig ist
-	else if (pswd.startsWith(t1Ip.value)) {
-		console.log("noch nicht fertig");
-		t1Ip.style.backgroundColor = "white";
-		erroractive1 = false;
-	} else {
-		if (!erroractive1) {
-			t1Ip.style.backgroundColor = "red";
-			erroractive1 = true;
-			error1++;
-			totalErrors1++;
-		} else {
-			t1Ip.style.backgroundColor = "red";
-		}
-	}
-	updateLiveStats(1);
-})
-//Test 2
-t2Ip.addEventListener("input", function() {
-	if (pswd == "") {
-		alert("Bitte setze zuerst ein Passwort in das obere Feld, bevor du den Test startest.");
-		t2Ip.value = "";
-		return;
-	}
-	if (startTime2 === null) {
-		startTime2 = new Date();
-		startTime1 = null;
-		typedPwd1 = 0;
-		typedPwd2 = 0;
-		error2 = 0;
-		erroractive2 = false;
-		activetrain = 2;
-	};
-	if (t2Ip.value === pswd && pswd !== "") {
-		const duration = (new Date() - startTime2) / 1000;
-		t2Ip.style.backgroundColor = "green";
-		t2Ip.value = "";
-		typedPwd2++;
-		completeRun(2, duration);
-		startTime2 = null;
-	}
-	// Auch sehen wenn das richtige passwort noch eingegeben wird, aber noch nicht fertig ist
-	else if (pswd.startsWith(t2Ip.value)) {
-		console.log("noch nicht fertig");
-		t2Ip.style.backgroundColor = "white";
-		erroractive2 = false;
-	} else {
-		if (!erroractive2) {
-			t2Ip.style.backgroundColor = "red";
-			erroractive2 = true;
-			error2++;
-			totalErrors2++;
-		} else {
-			t2Ip.style.backgroundColor = "red";
-		}
-	}
-	updateLiveStats(2);
-})
-// =========================================================
-// Statistics
-// =========================================================
-function stsupd(testNumber = activetrain) {
-	const activeStats = testNumber === 1 ? stats1 : stats2;
-	const inactiveStats = activetrain === 1 ? stats2 : stats1;
-	const activeErrors = testNumber === 1 ? totalErrors1 : totalErrors2;
-	const inactiveErrors = activetrain === 1 ? totalErrors2 : totalErrors1;
-	if (activetrain === 0) {
-		sts.innerHTML = "---";
-		return;
-	}
-	const averagePpm = activeStats.length > 0 ? activeStats.reduce((sum, stat) => sum + stat.ppm, 0) / activeStats.length : 0;
-	const totalAttempts = activeStats.length + activeErrors;
-	const errorRate = totalAttempts > 0 ? (activeErrors / totalAttempts) * 100 : 0;
-	let ratingText = "";
-	if (averagePpm < 8 || errorRate > 45) {
-		ratingText = "Schlecht";
-	} else if (averagePpm < 21 || errorRate > 22) {
-		ratingText = "Gut";
-	} else {
-		ratingText = "SEHR GUT";
-	}
-	// ==========================================
-	// Anzeige
-	// ==========================================
-	let html = "";
-	let inactiveHtml = "";
-	if (inactiveStats.length > 0) {
-		const inactiveAveragePpm = inactiveStats.reduce((sum, stat) => sum + stat.ppm, 0) / inactiveStats.length;
-		const inactiveAttempts = inactiveStats.length + inactiveErrors;
-		const inactiveErrorRate = inactiveAttempts > 0 ? (inactiveErrors / inactiveAttempts) * 100 : 0;
-		inactiveHtml = `Nicht Aktiver Test ${activetrain === 1 ? 2 : 1}: Fehlerquote: ${inactiveErrorRate.toFixed(2)}%, PPM: ${inactiveAveragePpm.toFixed(2)}<br><br>`;
-	}
-	// ==========================================
-	// Aktive Statistik
-	// ==========================================
-	activeStats.forEach((stat, index) => {
-		const run = index + 1;
-		// Nur 1, 5 und danach jeden 10. Durchlauf anzeigen
-		if (run === 1 || run === 5 || run % 10 === 0) {
-			html += `
-                <div class="stat-entry">
-                    <strong>Durchlauf ${run}</strong>
-                    <span>
-                        ${stat.ppm.toFixed(2)} PPM
-                    </span>
-                    <span>
-                        ${stat.errorRate.toFixed(2)} % Fehler
-                    </span>
-                </div>
-            `;
-		}
-	});
-	// Ausgabe
-	html = `${inactiveHtml}Aktiver Test: ${activetrain === 1 ? 1 : 2}<br>Fehlerquote: ${errorRate.toFixed(2)}%<br>Tempo: ${averagePpm.toFixed(2)} PPM (passwords per minute)<br><br>Du kannst es ${ratingText} tippen<hr>${html}`;
-	sts.innerHTML = html;
+
+// Texte dynamisch setzen
+function updateTexts() {
+  document.title = t('title');
+  document.querySelector('h1').textContent = t('title');
+  document.querySelector('.intro h2').textContent = t('introTitle');
+  document.querySelector('.intro p').textContent = t('introText');
+  document.getElementById('searchInput').placeholder = t('searchPlaceholder');
+  // Filter-Optionen
+  const languageFilter = document.getElementById('languageFilter');
+  if (languageFilter) {
+    languageFilter.options[0].textContent = t('allLanguages');
+  }
+  const sortBy = document.getElementById('sortBy');
+  if (sortBy) {
+    sortBy.options[0].textContent = t('sortUpdated');
+    sortBy.options[1].textContent = t('sortStars');
+    sortBy.options[2].textContent = t('sortName');
+  }
+  // Footer
+  const footer = document.querySelector('.footer-content');
+  if (footer) {
+    footer.children[0].textContent = t('dataFetched');
+    footer.children[1].textContent = t('autoUpdate');
+    footer.children[2].textContent = t('visitOnGitHub');
+  }
+  // Loading/Error
+  document.querySelector('#loading p').textContent = t('loading');
+  document.querySelector('#error p').textContent = t('error');
+  document.querySelector('#error button').textContent = t('tryAgain');
+  // Umschalter für Seiten/Alle anzeigen
+  setupDisplayModeSwitcher();
 }
+
+// GitHub Pages-Filter: Nur Repos mit Pages anzeigen
+function isPagesRepo(repo) {
+  // GitHub Pages ist aktiviert, wenn repo.has_pages === true
+  return repo.has_pages;
+}
+
+// Fetch repositories
+async function fetchRepositories() {
+  const loadingEl = document.getElementById('loading');
+  const errorEl = document.getElementById('error');
+  const reposEl = document.getElementById('repositories');
+
+  try {
+    loadingEl.classList.remove('hidden');
+    errorEl.classList.add('hidden');
+    reposEl.classList.add('hidden');
+
+    const response = await fetch(
+      `${API_BASE_URL}/users/${username}/repos?per_page=100&sort=updated`,
+      {
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'Repository-Showcase'
+        }
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch repositories');
+    }
+
+    let allRepos = await response.json();
+
+    // Filter nach Excludes und Modus (pages/all)
+    repositories = window.getDisplayRepositories(displayMode, allRepos);
+
+    // Update language filter options
+    updateLanguageOptions();
+
+    // Initial filtering and display
+    filterAndDisplayRepositories();
+
+    loadingEl.classList.add('hidden');
+    reposEl.classList.remove('hidden');
+  } catch (error) {
+    console.error('Error fetching repositories:', error);
+    loadingEl.classList.add('hidden');
+    errorEl.classList.remove('hidden');
+  }
+}
+
+// Update language filter options
+function updateLanguageOptions() {
+  const languages = new Set(repositories
+    .map(repo => repo.language)
+    .filter(Boolean));
+  
+  const languageFilter = document.getElementById('languageFilter');
+  languageFilter.innerHTML = `<option value="">${t('allLanguages')}</option>`;
+  
+  Array.from(languages).sort().forEach(language => {
+    const option = document.createElement('option');
+    option.value = language;
+    option.textContent = language;
+    languageFilter.appendChild(option);
+  });
+}
+
+// Filter and display repositories
+function filterAndDisplayRepositories() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  const language = document.getElementById('languageFilter').value;
+  const sortBy = document.getElementById('sortBy').value;
+
+  // Apply filters
+  filteredRepos = repositories.filter(repo => {
+    const matchesSearch = repo.name.toLowerCase().includes(searchTerm) ||
+      (repo.description && repo.description.toLowerCase().includes(searchTerm));
+    const matchesLanguage = !language || repo.language === language;
+    return matchesSearch && matchesLanguage;
+  });
+
+  // Apply sorting
+  filteredRepos.sort((a, b) => {
+    switch (sortBy) {
+      case 'stars':
+        return b.stargazers_count - a.stargazers_count;
+      case 'updated':
+        return new Date(b.updated_at) - new Date(a.updated_at);
+      case 'name':
+        return a.name.localeCompare(b.name);
+      default:
+        return 0;
+    }
+  });
+
+  displayRepositories();
+}
+
+// Display repositories
+function displayRepositories() {
+  const reposEl = document.getElementById('repositories');
+  reposEl.innerHTML = '';
+
+  filteredRepos.forEach(repo => {
+    const card = document.createElement('div');
+    card.className = 'repository-card';
+
+    const updatedDate = new Intl.DateTimeFormat(currentLang === 'de' ? 'de-DE' : 'en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).format(new Date(repo.updated_at));
+
+    // Wenn im Seitenmodus, dann Link zur GitHub Pages-Seite anzeigen und Displayname nutzen
+    let pageLink = '';
+    let repoDisplayName = repo.name;
+    if (displayMode === 'pages') {
+      const page = window.pagesRepositories.find(r => r.name === repo.name);
+      if (page) {
+        repoDisplayName = page.displayname || repo.name;
+        pageLink = `<a href="${page.url}" target="_blank" rel="noopener noreferrer" style="margin-left:8px;color:var(--primary);font-size:0.95em;">🌐 ${page.url.replace('https://','')}</a>`;
+      }
+    }
+
+    card.innerHTML = `
+      <div class="repo-header">
+        <a href="${repo.html_url}" target="_blank" rel="noopener noreferrer" class="repo-name">
+          ${repoDisplayName}
+        </a>
+        ${pageLink}
+      </div>
+      <p class="repo-description">
+        ${repo.description || t('noDescription')}
+      </p>
+      <div class="repo-meta">
+        ${repo.language ? `
+          <span>
+            <span class="language-dot" style="background-color: ${languageColors[repo.language] || '#888'}"></span>
+            ${repo.language}
+          </span>
+        ` : ''}
+        <span>${t('stars')} ${repo.stargazers_count}</span>
+        <span>${t('forks')} ${repo.forks_count}</span>
+        <span>${t('updated')} ${updatedDate}</span>
+      </div>
+    `;
+
+    reposEl.appendChild(card);
+  });
+}
+
+// Event listeners
+document.getElementById('searchInput').addEventListener('input', filterAndDisplayRepositories);
+document.getElementById('languageFilter').addEventListener('change', filterAndDisplayRepositories);
+document.getElementById('sortBy').addEventListener('change', filterAndDisplayRepositories);
+
+// Umschalter für Seiten/Alle anzeigen
+function setupDisplayModeSwitcher() {
+  const container = document.querySelector('.filter-options');
+  if (!container) return;
+  let btn = document.getElementById('displayModeToggle');
+  if (!btn) {
+    btn = document.createElement('button');
+    btn.id = 'displayModeToggle';
+    btn.style.marginLeft = '1rem';
+    btn.style.padding = '0.5rem 1rem';
+    btn.style.borderRadius = '0.5rem';
+    btn.style.border = '1px solid var(--border)';
+    btn.style.background = 'var(--card-background)';
+    btn.style.cursor = 'pointer';
+    container.appendChild(btn);
+  }
+  function updateBtnText() {
+    btn.textContent = displayMode === 'pages'
+      ? (currentLang === 'de' ? 'Alle Codes anzeigen' : 'Show all code')
+      : (currentLang === 'de' ? 'Nur Seiten anzeigen' : 'Show only pages');
+  }
+  btn.onclick = () => {
+    displayMode = displayMode === 'pages' ? 'all' : 'pages';
+    localStorage.setItem('displayMode', displayMode);
+    fetchRepositories();
+    updateBtnText();
+  };
+  updateBtnText();
+}
+
+// Auto-refresh repositories every 5 minutes
+fetchRepositories();
+setInterval(fetchRepositories, 5 * 60 * 1000);
+
+// Sprachumschalter initialisieren
+document.addEventListener('DOMContentLoaded', () => {
+  setupLanguageSwitcher();
+  updateTexts();
+  setupDisplayModeSwitcher();
+});
