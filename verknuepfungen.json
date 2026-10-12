@@ -1,0 +1,139 @@
+{
+  "Kategorien": [
+    {
+      "ID": "nz",
+      "Name": {
+        "de": "Nützlich",
+        "en": "Useful"
+      }
+    },
+    {
+      "ID": "sp",
+      "Name": {
+        "de": "Spiele",
+        "en": "Games"
+      }
+    },
+    {
+      "ID": "ex",
+      "Name": {
+        "de": "Experimente",
+        "en": "Experiments"
+      }
+    }
+  ],
+  "Projekte": [
+    {
+      "ID": "orgelplaner",
+      "Titel": {
+        "de": "Orgelplaner",
+        "en": "Organ Planner"
+      },
+      "Beschreibung": {
+        "de": "Hier kann man Orgelliedpläne erstellen und mein Repertoire begutachten.",
+        "en": "Create organ music plans and explore my repertoire."
+      },
+      "Weiterleitung": "orgel/",
+      "Kategorie": "nz",
+      "Sprachen": [
+        "de"
+      ]
+    },
+    {
+      "ID": "hungergames",
+      "Titel": {
+        "de": "Hungergames Simulator",
+        "en": "Hungergames Simulator"
+      },
+      "Beschreibung": {
+        "de": "Ein Simulator für das Hungergames-Spiel. Einer der detailiertesten Simulatoren, die ich kenne.",
+        "en": "A simulator for the Hungergames game. One of the most detailed simulators I know."
+      },
+      "Weiterleitung": "hng/",
+      "Kategorie": "sp",
+      "Sprachen": [
+        "de"
+      ]
+    },
+    {
+      "ID": "turingtest",
+      "Titel": {
+        "de": "Turingtest",
+        "en": "Turing Test"
+      },
+      "Beschreibung": {
+        "de": "Rate ob ein Medium menschlich oder von KI erstellt wurde. Stand ca 2024, für ein Schulprojekt.",
+        "en": "Determine whether a medium is human or AI-generated. Status around 2024, for a school project."
+      },
+      "Weiterleitung": "TuringTest.RSO/",
+      "Kategorie": "ex",
+      "Sprachen": [
+        "de"
+      ]
+    },
+    {
+      "ID": "deutschcheck",
+      "Titel": {
+        "de": "Deutsch-Check",
+        "en": "Test your German"
+      },
+      "Beschreibung": {
+        "de": "Fragen zu Themen Stilmittel und co für Prüfungsvorbereitung im Fach Deutsch.",
+        "en": "Questions to topics about style-mediums and similar. As Exam preperation for german Geman-students-."
+      },
+      "Weiterleitung": "Deutsch-Check/",
+      "Kategorie": "nz",
+      "Sprachen": [
+        "de"
+      ]
+    },
+    {
+      "ID": "Dungeon",
+      "Titel": {
+        "de": "Dungeon Spiel",
+        "en": "Dungeon Game"
+      },
+      "Beschreibung": {
+        "de": "Ein Spiel basierend auf einem meiner ersten VBA-Projekte, umgewandelt in html, js und css.",
+        "en": "A Game based on one of my first VBA-Projects, translated to html, js and css."
+      },
+      "Weiterleitung": "Dungeon/",
+      "Kategorie": "sp",
+      "Sprachen": [
+        "de"
+      ]
+    },
+        {
+      "ID": "schoolpromptbuilder",
+      "Titel": {
+        "de": "School Prompt Builder",
+        "en": "School Prompt Builder"
+      },
+      "Beschreibung": {
+        "de": "Erstelle einen Prompt um einen KI-Tutoren zu erhalten, welcher dich beim Lernen für die Schule unterstützt.",
+        "en": "Create a prompt to get an AI tutor who helps you with your school studies."
+      },
+      "Weiterleitung": "schoolpromptbuilder/",
+      "Kategorie": "nz",
+      "Sprachen": [
+        "de"
+      ]
+    },
+        {
+      "ID": "Passwortssicherheitstester",
+      "Titel": {
+        "de": "Passwortssicherheitstester",
+        "en": "Password Safety Tester"
+      },
+      "Beschreibung": {
+        "de": "Ein simpler Passwortsicherheitstester für meine Schule.",
+        "en": "A simple password safety tester for my school."
+      },
+      "Weiterleitung": "Passwortssicherheitstester/",
+      "Kategorie": "sp",
+      "Sprachen": [
+        "de"
+      ]
+    }
+  ]
+}

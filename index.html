@@ -1,100 +1,106 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-theme="light">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>trex159 GitHub Repositories</title>
-  <meta name="description" content="Explore all GitHub repositories by trex159 with descriptions and stats">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>INSIDEyourPC</title>
+  <meta name="description" content="Eine Sammlung privater Webprojekte, Spiele und nützlicher Experimente.">
+  <script>
+    /* Setzt Theme und Sprache vor dem ersten Rendern, damit nichts aufblitzt. */
+    (function () {
+      var d = document.documentElement,
+        t = null,
+        l = null;
+      try {
+        t = localStorage.getItem('hp.theme');
+        l = localStorage.getItem('hp.lang');
+      } catch (e) { }
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      d.setAttribute('data-theme', t);
+      if (l === 'de' || l === 'en') d.lang = l;
+    })();
+
+  </script>
   <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
+
 <body>
-  <header>
-    <div class="container header-content">
-      <div class="logo-title">
-        <svg class="github-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/>
-          <path d="M9 18c-4.51 2-5-2-7-2"/>
-        </svg>
-        <h1>trex159 Repositories</h1>
+  <a class="skip" href="#main" data-i18n="skip">Zum Inhalt springen</a>
+  <header class="topbar wrap">
+    <span class="brand" data-i18n="brand">Projekte</span>
+    <div class="tools">
+      <div class="seg" id="lang-switch" role="group" aria-label="Sprache der Seite" data-i18n-aria="uiLang">
+        <button type="button" data-lang="de" lang="de" aria-pressed="true">DE</button>
+        <button type="button" data-lang="en" lang="en" aria-pressed="false">EN</button>
       </div>
-      <button id="themeToggle" aria-label="Toggle theme">
-        <svg class="moon-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+      <button type="button" class="icon-btn" id="theme-toggle" aria-label="Zum dunklen Design wechseln">
+        <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
         </svg>
-        <svg class="sun-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="4"/>
-          <path d="M12 2v2"/>
-          <path d="M12 20v2"/>
-          <path d="m4.93 4.93 1.41 1.41"/>
-          <path d="m17.66 17.66 1.41 1.41"/>
-          <path d="M2 12h2"/>
-          <path d="M20 12h2"/>
-          <path d="m6.34 17.66-1.41 1.41"/>
-          <path d="m19.07 4.93-1.41 1.41"/>
+        <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4" />
+          <path
+            d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
         </svg>
       </button>
-      <button id="langToggle" aria-label="Sprache wechseln" style="margin-left:1rem;">English</button>
     </div>
   </header>
-
-  <main class="container">
-    <section class="intro">
-      <h2>GitHub Repositories</h2>
-      <p>Entdecke alle öffentlichen Repositories von trex159. Dieses Dashboard aktualisiert sich automatisch und bleibt mit der neuesten GitHub-Aktivität synchron.</p>
+  <main id="main" class="wrap" tabindex="-1">
+    <section class="hero">
+      <h1 data-i18n="greeting">Hallo und willkommen.</h1>
+      <p class="lead" data-i18n="lead">Hier sammle ich meine privaten Projekte, Spiele und nützlichen Experimente. Such
+        dir etwas aus und probier es aus.</p>
     </section>
-
-    <div class="filters">
-      <div class="search-container">
-        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="8"/>
-          <path d="m21 21-4.3-4.3"/>
+    <section class="controls" role="search">
+      <div class="search">
+        <label class="sr-only" for="search" data-i18n="searchLabel">Projekte durchsuchen</label>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M20 20l-4-4" />
         </svg>
-        <input type="text" id="searchInput" placeholder="Repositories durchsuchen...">
+        <input type="search" id="search" autocomplete="off" spellcheck="false"
+          placeholder="Titel oder Beschreibung suchen" data-i18n-placeholder="searchPlaceholder">
       </div>
-      <div class="filter-options">
-        <select id="languageFilter">
-          <option value="">Alle Sprachen</option>
-        </select>
-        <select id="sortBy">
-          <option value="updated">Zuletzt aktualisiert</option>
-          <option value="stars">Meiste Sterne</option>
-          <option value="name">Name</option>
-        </select>
+      <div class="filters">
+        <div>
+          <span class="field-label" id="cat-label" data-i18n="categoryGroup">Kategorie</span>
+          <div class="chips" id="categories" role="group" aria-labelledby="cat-label"></div>
+        </div>
+        <div class="selects">
+          <div class="field">
+            <label class="field-label" for="sublang" data-i18n="langFilter">Sprache des Projekts</label>
+            <div class="select"><select id="sublang"></select></div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="sort" data-i18n="sort">Sortierung</label>
+            <div class="select"><select id="sort"></select></div>
+          </div>
+        </div>
       </div>
+    </section>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <div class="notice" id="notice" role="alert" hidden></div>
+    <ul class="grid" id="grid"></ul>
+    <div class="empty" id="empty" hidden>
+      <h2 data-i18n="emptyTitle">Keine Projekte gefunden</h2>
+      <p data-i18n="emptyText">Passe die Suche oder die Filter an, um andere Projekte zu sehen.</p>
+      <button type="button" class="btn" id="reset" data-i18n="reset">Filter zurücksetzen</button>
     </div>
-
-    <div id="repositories" class="repository-grid">
-      <!-- Repositories will be dynamically inserted here -->
-    </div>
-
-    <div id="loading" class="loading">
-      <div class="spinner"></div>
-      <p>Loading repositories...</p>
-    </div>
-
-    <div id="error" class="error hidden">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <line x1="12" y1="8" x2="12" y2="12"/>
-        <line x1="12" y1="16" x2="12.01" y2="16"/>
-      </svg>
-      <p>Fehler beim Laden der Repositories</p>
-      <button onclick="location.reload()">Erneut versuchen</button>
-    </div>
+    <noscript>
+      <div class="notice">
+        <p>Diese Seite benötigt JavaScript, um die Projektliste anzuzeigen. / This page needs JavaScript to show the
+          project list.</p>
+      </div>
+    </noscript>
   </main>
-
-  <footer>
-    <div class="container">
-      <div class="footer-content">
-        <p>Daten von GitHub API</p>
-        <p>Automatisch alle 5 Minuten aktualisiert</p>
-        <a href="https://github.com/trex159" target="_blank" rel="noopener noreferrer">trex159 auf GitHub besuchen</a>
-      </div>
-    </div>
-    <p class="invis">Wenn du von einem Rätsel geschickt wurdest, lautet die Antwort: "richtige Antwort"</p>
+  <footer class="site-footer wrap">
+    <p data-i18n="footer">Einstellungen werden nur in deinem Browser gespeichert.</p>
   </footer>
-
-  <script src="filters.js"></script>
-  <script src="script.js"></script>
 </body>
+
 </html>

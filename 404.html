@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="light">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex">
+  <!-- Basispfad der Homepage. "/" gilt für eine eigene Domain.
+       Bei einer GitHub-Projektseite (nutzer.github.io/repo/) hier "/repo/" eintragen. -->
+  <meta name="site-root" content="/">
+  <title>404</title>
+  <script>
+    (function () {
+      var d = document.documentElement,
+        t = null,
+        l = null;
+      try {
+        t = localStorage.getItem('hp.theme');
+        l = localStorage.getItem('hp.lang');
+      } catch (e) { }
+      if (t !== 'light' && t !== 'dark') {
+        t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      if (l !== 'de' && l !== 'en') l = (navigator.language || '').toLowerCase().indexOf('de') === 0 ? 'de' : 'en';
+      d.setAttribute('data-theme', t);
+      d.lang = l;
+      var m = document.querySelector('meta[name="site-root"]');
+      var root = (m && m.content) || '/';
+      if (root.charAt(0) !== '/') root = '/' + root;
+      if (root.slice(-1) !== '/') root += '/';
+      document.title = l === 'de' ? '404 | Seite nicht gefunden' : '404 | Page not found';
+      document.write('<link rel="stylesheet" href="' + root + 'style.css">');
+      window.__siteRoot = root;
+    })();
+
+  </script>
+  <noscript>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+      html .error-page [lang] {
+        display: inline !important;
+      }
+
+      html .error-page [lang="en"]::before {
+        content: " / ";
+      }
+    </style>
+  </noscript>
+</head>
+
+<body>
+  <main class="wrap error-page">
+    <p class="error-code" aria-hidden="true">404</p>
+    <h1>
+      <span lang="de">Diese Seite gibt es nicht.</span>
+      <span lang="en">This page does not exist.</span>
+    </h1>
+    <p>
+      <span lang="de">Die Adresse <code id="path"></code> wurde nicht gefunden. Sie wurde verschoben oder gelöscht, oder
+        der Link enthält einen Tippfehler.</span>
+      <span lang="en">The address <code id="path-en"></code> was not found. It may have moved, been removed, or the link
+        contains a typo.</span>
+    </p>
+    <p><a class="btn" id="home" href="/"><span lang="de">Zur Startseite</span><span lang="en">Back to the
+          homepage</span></a></p>
+  </main>
+  <script>
+    (function () {
+      var p = location.pathname;
+      ['path', 'path-en'].forEach(function (id) {
+        var n = document.getElementById(id);
+        if (n) n.textContent = p;
+      });
+      var h = document.getElementById('home');
+      if (h && window.__siteRoot) h.setAttribute('href', window.__siteRoot);
+    })();
+
+  </script>
+</body>
+
+</html>

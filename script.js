@@ -1,327 +1,509 @@
-// Theme handling
-const theme = localStorage.getItem('theme') || 
-  (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-document.documentElement.setAttribute('data-theme', theme);
-
-document.getElementById('themeToggle').addEventListener('click', () => {
-  const currentTheme = document.documentElement.getAttribute('data-theme');
-  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
-});
-
-// GitHub API integration
-const username = 'trex159';
-const API_BASE_URL = 'https://api.github.com';
-let repositories = [];
-let filteredRepos = [];
-let displayMode = localStorage.getItem('displayMode') || 'pages'; // 'pages' oder 'all'
-
-// Language colors for repository cards
-const languageColors = {
-  JavaScript: '#f1e05a',
-  TypeScript: '#3178c6',
-  Python: '#3572A5',
-  HTML: '#e34c26',
-  CSS: '#563d7c',
-  Java: '#b07219',
-  'C++': '#f34b7d',
-  C: '#555555',
-  Ruby: '#701516',
-  PHP: '#4F5D95',
-  Go: '#00ADD8',
-  Rust: '#dea584'
-};
-
-// Sprachunterstützung (i18n)
-const translations = {
-  de: {
-    title: "trex159 Repositories",
-    introTitle: "GitHub Repositories",
-    introText: "Entdecke alle öffentlichen Repositories von trex159. Dieses Dashboard aktualisiert sich automatisch und bleibt mit der neuesten GitHub-Aktivität synchron.",
-    searchPlaceholder: "Repositories durchsuchen...",
-    allLanguages: "Alle Sprachen",
-    sortUpdated: "Zuletzt aktualisiert",
-    sortStars: "Meiste Sterne",
-    sortName: "Name",
-    loading: "Lade Repositories...",
-    error: "Fehler beim Laden der Repositories",
-    tryAgain: "Erneut versuchen",
-    dataFetched: "Daten von GitHub API",
-    autoUpdate: "Automatisch alle 5 Minuten aktualisiert",
-    visitOnGitHub: "trex159 auf GitHub besuchen",
-    noDescription: "Keine Beschreibung vorhanden",
-    updated: "Aktualisiert",
-    stars: "⭐",
-    forks: "🔄"
-  },
-  en: {
-    title: "trex159 Repositories",
-    introTitle: "GitHub Repositories",
-    introText: "Explore all public repositories by trex159. This dashboard automatically updates to stay in sync with the latest GitHub activity.",
-    searchPlaceholder: "Search repositories...",
-    allLanguages: "All Languages",
-    sortUpdated: "Recently Updated",
-    sortStars: "Most Stars",
-    sortName: "Name",
-    loading: "Loading repositories...",
-    error: "Failed to load repositories",
-    tryAgain: "Try Again",
-    dataFetched: "Data fetched from GitHub's API",
-    autoUpdate: "Updated automatically every 5 minutes",
-    visitOnGitHub: "Visit trex159 on GitHub",
-    noDescription: "No description provided",
-    updated: "Updated",
-    stars: "⭐",
-    forks: "🔄"
-  }
-};
-
-let currentLang = localStorage.getItem('lang') || 'de';
-
-function t(key) {
-  return translations[currentLang][key];
-}
-
-// Sprachumschalter
-function setupLanguageSwitcher() {
-  const langBtn = document.getElementById('langToggle');
-  langBtn.textContent = currentLang === 'de' ? 'English' : 'Deutsch';
-  langBtn.addEventListener('click', () => {
-    currentLang = currentLang === 'de' ? 'en' : 'de';
-    localStorage.setItem('lang', currentLang);
-    updateTexts();
-    filterAndDisplayRepositories();
-  });
-}
-
-// Texte dynamisch setzen
-function updateTexts() {
-  document.title = t('title');
-  document.querySelector('h1').textContent = t('title');
-  document.querySelector('.intro h2').textContent = t('introTitle');
-  document.querySelector('.intro p').textContent = t('introText');
-  document.getElementById('searchInput').placeholder = t('searchPlaceholder');
-  // Filter-Optionen
-  const languageFilter = document.getElementById('languageFilter');
-  if (languageFilter) {
-    languageFilter.options[0].textContent = t('allLanguages');
-  }
-  const sortBy = document.getElementById('sortBy');
-  if (sortBy) {
-    sortBy.options[0].textContent = t('sortUpdated');
-    sortBy.options[1].textContent = t('sortStars');
-    sortBy.options[2].textContent = t('sortName');
-  }
-  // Footer
-  const footer = document.querySelector('.footer-content');
-  if (footer) {
-    footer.children[0].textContent = t('dataFetched');
-    footer.children[1].textContent = t('autoUpdate');
-    footer.children[2].textContent = t('visitOnGitHub');
-  }
-  // Loading/Error
-  document.querySelector('#loading p').textContent = t('loading');
-  document.querySelector('#error p').textContent = t('error');
-  document.querySelector('#error button').textContent = t('tryAgain');
-  // Umschalter für Seiten/Alle anzeigen
-  setupDisplayModeSwitcher();
-}
-
-// GitHub Pages-Filter: Nur Repos mit Pages anzeigen
-function isPagesRepo(repo) {
-  // GitHub Pages ist aktiviert, wenn repo.has_pages === true
-  return repo.has_pages;
-}
-
-// Fetch repositories
-async function fetchRepositories() {
-  const loadingEl = document.getElementById('loading');
-  const errorEl = document.getElementById('error');
-  const reposEl = document.getElementById('repositories');
-
-  try {
-    loadingEl.classList.remove('hidden');
-    errorEl.classList.add('hidden');
-    reposEl.classList.add('hidden');
-
-    const response = await fetch(
-      `${API_BASE_URL}/users/${username}/repos?per_page=100&sort=updated`,
-      {
-        headers: {
-          'Accept': 'application/vnd.github.v3+json',
-          'User-Agent': 'Repository-Showcase'
-        }
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch repositories');
-    }
-
-    let allRepos = await response.json();
-
-    // Filter nach Excludes und Modus (pages/all)
-    repositories = window.getDisplayRepositories(displayMode, allRepos);
-
-    // Update language filter options
-    updateLanguageOptions();
-
-    // Initial filtering and display
-    filterAndDisplayRepositories();
-
-    loadingEl.classList.add('hidden');
-    reposEl.classList.remove('hidden');
-  } catch (error) {
-    console.error('Error fetching repositories:', error);
-    loadingEl.classList.add('hidden');
-    errorEl.classList.remove('hidden');
-  }
-}
-
-// Update language filter options
-function updateLanguageOptions() {
-  const languages = new Set(repositories
-    .map(repo => repo.language)
-    .filter(Boolean));
-  
-  const languageFilter = document.getElementById('languageFilter');
-  languageFilter.innerHTML = `<option value="">${t('allLanguages')}</option>`;
-  
-  Array.from(languages).sort().forEach(language => {
-    const option = document.createElement('option');
-    option.value = language;
-    option.textContent = language;
-    languageFilter.appendChild(option);
-  });
-}
-
-// Filter and display repositories
-function filterAndDisplayRepositories() {
-  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-  const language = document.getElementById('languageFilter').value;
-  const sortBy = document.getElementById('sortBy').value;
-
-  // Apply filters
-  filteredRepos = repositories.filter(repo => {
-    const matchesSearch = repo.name.toLowerCase().includes(searchTerm) ||
-      (repo.description && repo.description.toLowerCase().includes(searchTerm));
-    const matchesLanguage = !language || repo.language === language;
-    return matchesSearch && matchesLanguage;
-  });
-
-  // Apply sorting
-  filteredRepos.sort((a, b) => {
-    switch (sortBy) {
-      case 'stars':
-        return b.stargazers_count - a.stargazers_count;
-      case 'updated':
-        return new Date(b.updated_at) - new Date(a.updated_at);
-      case 'name':
-        return a.name.localeCompare(b.name);
-      default:
-        return 0;
-    }
-  });
-
-  displayRepositories();
-}
-
-// Display repositories
-function displayRepositories() {
-  const reposEl = document.getElementById('repositories');
-  reposEl.innerHTML = '';
-
-  filteredRepos.forEach(repo => {
-    const card = document.createElement('div');
-    card.className = 'repository-card';
-
-    const updatedDate = new Intl.DateTimeFormat(currentLang === 'de' ? 'de-DE' : 'en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(new Date(repo.updated_at));
-
-    // Wenn im Seitenmodus, dann Link zur GitHub Pages-Seite anzeigen und Displayname nutzen
-    let pageLink = '';
-    let repoDisplayName = repo.name;
-    if (displayMode === 'pages') {
-      const page = window.pagesRepositories.find(r => r.name === repo.name);
-      if (page) {
-        repoDisplayName = page.displayname || repo.name;
-        pageLink = `<a href="${page.url}" target="_blank" rel="noopener noreferrer" style="margin-left:8px;color:var(--primary);font-size:0.95em;">🌐 ${page.url.replace('https://','')}</a>`;
-      }
-    }
-
-    card.innerHTML = `
-      <div class="repo-header">
-        <a href="${repo.html_url}" target="_blank" rel="noopener noreferrer" class="repo-name">
-          ${repoDisplayName}
-        </a>
-        ${pageLink}
-      </div>
-      <p class="repo-description">
-        ${repo.description || t('noDescription')}
-      </p>
-      <div class="repo-meta">
-        ${repo.language ? `
-          <span>
-            <span class="language-dot" style="background-color: ${languageColors[repo.language] || '#888'}"></span>
-            ${repo.language}
-          </span>
-        ` : ''}
-        <span>${t('stars')} ${repo.stargazers_count}</span>
-        <span>${t('forks')} ${repo.forks_count}</span>
-        <span>${t('updated')} ${updatedDate}</span>
-      </div>
-    `;
-
-    reposEl.appendChild(card);
-  });
-}
-
-// Event listeners
-document.getElementById('searchInput').addEventListener('input', filterAndDisplayRepositories);
-document.getElementById('languageFilter').addEventListener('change', filterAndDisplayRepositories);
-document.getElementById('sortBy').addEventListener('change', filterAndDisplayRepositories);
-
-// Umschalter für Seiten/Alle anzeigen
-function setupDisplayModeSwitcher() {
-  const container = document.querySelector('.filter-options');
-  if (!container) return;
-  let btn = document.getElementById('displayModeToggle');
-  if (!btn) {
-    btn = document.createElement('button');
-    btn.id = 'displayModeToggle';
-    btn.style.marginLeft = '1rem';
-    btn.style.padding = '0.5rem 1rem';
-    btn.style.borderRadius = '0.5rem';
-    btn.style.border = '1px solid var(--border)';
-    btn.style.background = 'var(--card-background)';
-    btn.style.cursor = 'pointer';
-    container.appendChild(btn);
-  }
-  function updateBtnText() {
-    btn.textContent = displayMode === 'pages'
-      ? (currentLang === 'de' ? 'Alle Codes anzeigen' : 'Show all code')
-      : (currentLang === 'de' ? 'Nur Seiten anzeigen' : 'Show only pages');
-  }
-  btn.onclick = () => {
-    displayMode = displayMode === 'pages' ? 'all' : 'pages';
-    localStorage.setItem('displayMode', displayMode);
-    fetchRepositories();
-    updateBtnText();
+'use strict';
+(() => {
+  const CONFIG_URL = 'verknuepfungen.json';
+  const KEYS = {
+    lang: 'hp.lang',
+    theme: 'hp.theme',
+    sort: 'hp.sort',
+    category: 'hp.category',
+    sublang: 'hp.sublang'
   };
-  updateBtnText();
+  const LANGS = ['de', 'en'];
+  const SORTS = ['default', 'az', 'za', 'category'];
+  /* ---------- Texte der Oberfläche ---------- */
+  const I18N = {
+    de: {
+      title: 'Meine Projekte',
+      description: 'Eine Sammlung privater Webprojekte, Spiele und nützlicher Experimente.',
+      skip: 'Zum Inhalt springen',
+      brand: 'Projekte',
+      greeting: 'Hallo und willkommen.',
+      lead: 'Hier sammle ich meine privaten Projekte, Spiele und nützlichen Experimente. Such dir etwas aus und probier es aus.',
+      searchLabel: 'Projekte durchsuchen',
+      searchPlaceholder: 'Titel oder Beschreibung suchen',
+      categoryGroup: 'Kategorie',
+      all: 'Alle',
+      langFilter: 'Sprache des Projekts',
+      allLanguages: 'Alle Sprachen',
+      sort: 'Sortierung',
+      sortDefault: 'Standard',
+      sortAz: 'Titel A bis Z',
+      sortZa: 'Titel Z bis A',
+      sortCategory: 'Nach Kategorie',
+      one: '1 Projekt',
+      many: '{n} Projekte',
+      emptyTitle: 'Keine Projekte gefunden',
+      emptyText: 'Passe die Suche oder die Filter an, um andere Projekte zu sehen.',
+      reset: 'Filter zurücksetzen',
+      loading: 'Projekte werden geladen',
+      errorTitle: 'Projekte konnten nicht geladen werden',
+      errorText: 'Prüfe, ob verknuepfungen.json vorhanden und gültig ist. Beim lokalen Testen wird ein HTTP-Server benötigt, file:// funktioniert nicht.',
+      configEmpty: 'Es sind noch keine Projekte eingetragen.',
+      skipped: '{n} fehlerhafte Einträge in verknuepfungen.json wurden übersprungen. Details stehen in der Browser-Konsole.',
+      supported: 'Unterstützte Sprachen',
+      uiLang: 'Sprache der Seite',
+      toDark: 'Zum dunklen Design wechseln',
+      toLight: 'Zum hellen Design wechseln',
+      footer: 'Einstellungen werden nur in deinem Browser gespeichert.'
+    },
+    en: {
+      title: 'My projects',
+      description: 'A collection of private web projects, games and useful experiments.',
+      skip: 'Skip to content',
+      brand: 'Projects',
+      greeting: 'Hello and welcome.',
+      lead: 'This is where I collect my private projects, games and useful experiments. Pick something and try it out.',
+      searchLabel: 'Search projects',
+      searchPlaceholder: 'Search title or description',
+      categoryGroup: 'Category',
+      all: 'All',
+      langFilter: 'Project language',
+      allLanguages: 'All languages',
+      sort: 'Sort by',
+      sortDefault: 'Default',
+      sortAz: 'Title A to Z',
+      sortZa: 'Title Z to A',
+      sortCategory: 'By category',
+      one: '1 project',
+      many: '{n} projects',
+      emptyTitle: 'No projects found',
+      emptyText: 'Adjust the search or the filters to see other projects.',
+      reset: 'Reset filters',
+      loading: 'Loading projects',
+      errorTitle: 'Projects could not be loaded',
+      errorText: 'Check that verknuepfungen.json exists and is valid. Local testing needs an HTTP server, file:// does not work.',
+      configEmpty: 'No projects have been added yet.',
+      skipped: '{n} invalid entries in verknuepfungen.json were skipped. See the browser console for details.',
+      supported: 'Supported languages',
+      uiLang: 'Page language',
+      toDark: 'Switch to dark theme',
+      toLight: 'Switch to light theme',
+      footer: 'Settings are stored in your browser only.'
+    }
+  };
+  /* ---------- Hilfsfunktionen ---------- */
+  const $ = (sel) => document.querySelector(sel);
+  const el = (tag, cls, text) => {
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const isStr = (v) => typeof v === 'string' && v.trim() !== '';
+  const store = {
+    get(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (e) {
+        return null;
+      }
+    },
+    set(key, value) {
+      try {
+        localStorage.setItem(key, value);
+      } catch (e) {
+        /* Speicher nicht verfügbar */
 }
+    }
+  };
+  /* Rückfallregel: gewählte Sprache, dann die jeweils andere (de/en), dann beliebiger Text. */
+  function pick(value, lang) {
+    if (typeof value === 'string') return value.trim();
+    if (!isObj(value)) return '';
+    for (const k of (lang === 'en' ? ['en', 'de'] : ['de', 'en'])) {
+      if (isStr(value[k])) return value[k].trim();
+    }
+    const any = Object.values(value).find(isStr);
+    return any ? any.trim() : '';
+  }
 
-// Auto-refresh repositories every 5 minutes
-fetchRepositories();
-setInterval(fetchRepositories, 5 * 60 * 1000);
+  function safeLink(raw) {
+    if (!isStr(raw)) return null;
+    try {
+      const u = new URL(raw.trim(), document.baseURI);
+      return u.protocol === 'http:' || u.protocol === 'https:' ? u.href : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  /* Icons: nur lokale PNG- oder SVG-Dateien, immer über <img> (Skripte in SVG werden dort nicht ausgeführt). */
+  function safeIcon(raw) {
+    if (!isStr(raw)) return null;
+    const r = raw.trim();
+    if (!/\.(png|svg)$/i.test(r)) return null;
+    try {
+      const u = new URL(r, document.baseURI);
+      return u.origin === location.origin ? u.href : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  /* ---------- Zustand ---------- */
+  const storedLang = store.get(KEYS.lang);
+  const storedTheme = store.get(KEYS.theme);
+  const state = {
+    lang: LANGS.includes(storedLang) ? storedLang : ((navigator.language || '').toLowerCase().startsWith('de') ? 'de' : 'en'),
+    manualTheme: storedTheme === 'light' || storedTheme === 'dark',
+    theme: document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light',
+    sort: SORTS.includes(store.get(KEYS.sort)) ? store.get(KEYS.sort) : 'default',
+    category: store.get(KEYS.category) || 'all',
+    sublang: store.get(KEYS.sublang) || 'all',
+    query: '',
+    categories: [],
+    projects: [],
+    languages: [],
+    skipped: 0,
+    status: 'loading',
+    collator: null
+  };
+  const t = (key, n) => {
+    const s = (I18N[state.lang] && I18N[state.lang][key]) || I18N.de[key] || key;
+    return n == null ? s : s.replace('{n}', n);
+  };
+  /* ---------- Theme ---------- */
+  function applyTheme(theme) {
+    state.theme = theme;
+    document.documentElement.setAttribute('data-theme', theme);
+    $('#theme-toggle').setAttribute('aria-label', theme === 'dark' ? t('toLight') : t('toDark'));
+  }
+  /* ---------- Statische Texte ---------- */
+  function applyStaticTexts() {
+    document.documentElement.lang = state.lang;
+    document.title = t('title');
+    const meta = $('meta[name="description"]');
+    if (meta) meta.setAttribute('content', t('description'));
+    document.querySelectorAll('[data-i18n]').forEach((n) => {
+      n.textContent = t(n.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((n) => n.setAttribute('placeholder', t(n.dataset.i18nPlaceholder)));
+    document.querySelectorAll('[data-i18n-aria]').forEach((n) => n.setAttribute('aria-label', t(n.dataset.i18nAria)));
+    document.querySelectorAll('#lang-switch button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.lang === state.lang)));
+    $('#theme-toggle').setAttribute('aria-label', state.theme === 'dark' ? t('toLight') : t('toDark'));
+  }
+  /* ---------- Konfiguration prüfen ---------- */
+  function parseConfig(data) {
+    let skipped = 0;
+    const warn = (msg) => {
+      skipped += 1;
+      console.warn('[verknuepfungen.json] ' + msg);
+    };
+    if (!isObj(data) || !Array.isArray(data.Projekte)) throw new Error('Ungültige Struktur: "Projekte" muss eine Liste sein.');
+    const categories = [];
+    const catIds = new Set();
+    (Array.isArray(data.Kategorien) ? data.Kategorien : []).forEach((c, i) => {
+      if (!isObj(c) || !isStr(c.ID) || !pick(c.Name, 'de')) return warn('Kategorie #' + (i + 1) + ': ID oder Name fehlt.');
+      if (catIds.has(c.ID)) return warn('Kategorie "' + c.ID + '": doppelte ID.');
+      catIds.add(c.ID);
+      categories.push({
+        id: c.ID,
+        name: c.Name
+      });
+    });
+    const projects = [];
+    const ids = new Set();
+    data.Projekte.forEach((p, i) => {
+      const label = 'Projekt #' + (i + 1) + (isObj(p) && isStr(p.ID) ? ' ("' + p.ID + '")' : '');
+      if (!isObj(p)) return warn(label + ': kein Objekt.');
+      if (!isStr(p.ID)) return warn(label + ': ID fehlt.');
+      if (ids.has(p.ID)) return warn(label + ': doppelte ID.');
+      if (!pick(p.Titel, 'de')) return warn(label + ': Titel fehlt.');
+      if (!pick(p.Beschreibung, 'de')) return warn(label + ': Beschreibung fehlt.');
+      const href = safeLink(p.Weiterleitung);
+      if (!href) return warn(label + ': Weiterleitung fehlt oder ist ungültig.');
+      if (!catIds.has(p.Kategorie)) return warn(label + ': Kategorie "' + p.Kategorie + '" ist nicht definiert.');
+      if (!Array.isArray(p.Sprachen)) return warn(label + ': Sprachen muss eine Liste sein.');
+      const icon = safeIcon(p.Icon);
+      if (p.Icon != null && !icon) console.warn('[verknuepfungen.json] ' + label + ': Icon wird ignoriert (nur lokale PNG/SVG-Pfade).');
+      ids.add(p.ID);
+      projects.push({
+        id: p.ID,
+        order: projects.length,
+        titleSrc: p.Titel,
+        descSrc: p.Beschreibung,
+        href,
+        icon,
+        category: p.Kategorie,
+        languages: [...new Set(p.Sprachen.filter(isStr).map((l) => l.trim().toLowerCase()))],
+        title: '',
+        desc: '',
+        catName: '',
+        node: null
+      });
+    });
+    const used = new Set(projects.map((p) => p.category));
+    return {
+      categories: categories.filter((c) => used.has(c.id)),
+      projects,
+      skipped
+    };
+  }
+  /* ---------- Sprachabhängige Daten ---------- */
+  function refreshLocalized() {
+    state.collator = new Intl.Collator(state.lang, {
+      sensitivity: 'base',
+      numeric: true
+    });
+    const catName = new Map(state.categories.map((c) => [c.id, pick(c.name, state.lang)]));
+    state.projects.forEach((p) => {
+      p.title = pick(p.titleSrc, state.lang);
+      p.desc = pick(p.descSrc, state.lang);
+      p.catName = catName.get(p.category) || '';
+      p.node = null;
+    });
+  }
 
-// Sprachumschalter initialisieren
-document.addEventListener('DOMContentLoaded', () => {
-  setupLanguageSwitcher();
-  updateTexts();
-  setupDisplayModeSwitcher();
-});
+  function langName(code) {
+    try {
+      const n = new Intl.DisplayNames([state.lang], {
+        type: 'language'
+      }).of(code);
+      if (n && n !== code) return n;
+    } catch (e) {
+      /* Rückfall unten */
+}
+    return code.toUpperCase();
+  }
+  /* ---------- Rendering ---------- */
+  function monogram(title) {
+    const m = el('span', 'monogram', (title.trim().charAt(0) || '?').toUpperCase());
+    m.setAttribute('aria-hidden', 'true');
+    return m;
+  }
+
+  function buildCard(p) {
+    const li = el('li');
+    const a = el('a', 'card');
+    a.href = p.href;
+    if (new URL(p.href).origin !== location.origin) a.rel = 'noopener';
+    if (p.icon) {
+      const img = new Image(48, 48);
+      img.className = 'card-icon';
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      img.addEventListener('error', () => img.replaceWith(monogram(p.title)), {
+        once: true
+      });
+      img.src = p.icon;
+      a.append(img);
+    } else {
+      a.append(monogram(p.title));
+    }
+    a.append(el('h3', 'card-title', p.title), el('p', 'card-desc', p.desc));
+    const meta = el('ul', 'card-meta');
+    if (p.catName) meta.append(el('li', 'badge', p.catName));
+    p.languages.forEach((code) => {
+      const b = el('li', 'badge', code.toUpperCase());
+      b.title = t('supported') + ': ' + langName(code);
+      meta.append(b);
+    });
+    if (meta.children.length) a.append(meta);
+    li.append(a);
+    return li;
+  }
+
+  function renderCategories() {
+    const box = $('#categories');
+    const make = (id, label) => {
+      const b = el('button', 'chip', label);
+      b.type = 'button';
+      b.dataset.id = id;
+      b.setAttribute('aria-pressed', String(state.category === id));
+      return b;
+    };
+    box.replaceChildren(make('all', t('all')), ...state.categories.map((c) => make(c.id, pick(c.name, state.lang))));
+    box.hidden = state.categories.length === 0;
+  }
+
+  function renderSelects() {
+    const sub = $('#sublang');
+    sub.replaceChildren(new Option(t('allLanguages'), 'all'), ...state.languages.map((c) => new Option(langName(c), c)));
+    sub.value = state.sublang;
+    sub.disabled = state.languages.length === 0;
+    const sort = $('#sort');
+    const labels = {
+      default: t('sortDefault'),
+      az: t('sortAz'),
+      za: t('sortZa'),
+      category: t('sortCategory')
+    };
+    sort.replaceChildren(...SORTS.map((s) => new Option(labels[s], s)));
+    sort.value = state.sort;
+  }
+
+  function visibleProjects() {
+    const q = state.query.trim().toLocaleLowerCase(state.lang);
+    const terms = q ? q.split(/\s+/) : [];
+    const cmp = state.collator.compare;
+    const list = state.projects.filter((p) => {
+      if (state.category !== 'all' && p.category !== state.category) return false;
+      if (state.sublang !== 'all' && !p.languages.includes(state.sublang)) return false;
+      if (!terms.length) return true;
+      const hay = (p.title + ' ' + p.desc).toLocaleLowerCase(state.lang);
+      return terms.every((term) => hay.includes(term));
+    });
+    const byOrder = (a, b) => a.order - b.order;
+    if (state.sort === 'az') list.sort((a, b) => cmp(a.title, b.title) || byOrder(a, b));
+    else if (state.sort === 'za') list.sort((a, b) => cmp(b.title, a.title) || byOrder(a, b));
+    else if (state.sort === 'category') list.sort((a, b) => cmp(a.catName, b.catName) || cmp(a.title, b.title) || byOrder(a, b));
+    else list.sort(byOrder);
+    return list;
+  }
+
+  function update() {
+    const grid = $('#grid');
+    const status = $('#status');
+    const empty = $('#empty');
+    if (state.status === 'loading') {
+      status.textContent = t('loading');
+      return;
+    }
+    if (state.status === 'error') {
+      grid.replaceChildren();
+      empty.hidden = true;
+      status.textContent = '';
+      return;
+    }
+    const list = visibleProjects();
+    grid.replaceChildren(...list.map((p) => p.node || (p.node = buildCard(p))));
+    status.textContent = list.length === 1 ? t('one') : t('many', list.length);
+    empty.hidden = list.length !== 0;
+    if (!state.projects.length) {
+      empty.querySelector('h2').textContent = t('configEmpty');
+      empty.querySelector('p').hidden = true;
+      empty.querySelector('button').hidden = true;
+    } else {
+      empty.querySelector('h2').textContent = t('emptyTitle');
+      empty.querySelector('p').hidden = false;
+      empty.querySelector('button').hidden = false;
+    }
+  }
+
+  function renderNotice() {
+    const n = $('#notice');
+    n.replaceChildren();
+    if (state.status === 'error') {
+      n.append(el('h2', null, t('errorTitle')), el('p', null, t('errorText')));
+      n.hidden = false;
+    } else if (state.skipped > 0) {
+      n.append(el('p', null, t('skipped', state.skipped)));
+      n.hidden = false;
+    } else {
+      n.hidden = true;
+    }
+  }
+
+  function renderAll() {
+    applyStaticTexts();
+    renderCategories();
+    renderSelects();
+    renderNotice();
+    update();
+  }
+  /* ---------- Änderungen ---------- */
+  function setLang(lang) {
+    if (!LANGS.includes(lang) || lang === state.lang) return;
+    state.lang = lang;
+    store.set(KEYS.lang, lang);
+    refreshLocalized();
+    renderAll();
+  }
+
+  function setCategory(id) {
+    state.category = id;
+    store.set(KEYS.category, id);
+    renderCategories();
+    update();
+  }
+
+  function resetFilters() {
+    state.query = '';
+    $('#search').value = '';
+    state.category = 'all';
+    state.sublang = 'all';
+    store.set(KEYS.category, 'all');
+    store.set(KEYS.sublang, 'all');
+    renderCategories();
+    renderSelects();
+    update();
+  }
+
+  function bindEvents() {
+    $('#lang-switch').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-lang]');
+      if (b) setLang(b.dataset.lang);
+    });
+    $('#theme-toggle').addEventListener('click', () => {
+      const next = state.theme === 'dark' ? 'light' : 'dark';
+      state.manualTheme = true;
+      store.set(KEYS.theme, next);
+      applyTheme(next);
+    });
+    if (window.matchMedia) {
+      const mq = matchMedia('(prefers-color-scheme: dark)');
+      const onChange = (e) => {
+        if (!state.manualTheme) applyTheme(e.matches ? 'dark' : 'light');
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onChange);
+    }
+    const search = $('#search');
+    search.addEventListener('input', () => {
+      state.query = search.value;
+      update();
+    });
+    search.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && search.value) {
+        search.value = '';
+        state.query = '';
+        update();
+      }
+    });
+    $('#categories').addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-id]');
+      if (b) setCategory(b.dataset.id);
+    });
+    $('#sublang').addEventListener('change', (e) => {
+      state.sublang = e.target.value;
+      store.set(KEYS.sublang, state.sublang);
+      update();
+    });
+    $('#sort').addEventListener('change', (e) => {
+      state.sort = e.target.value;
+      store.set(KEYS.sort, state.sort);
+      update();
+    });
+    $('#reset').addEventListener('click', resetFilters);
+  }
+  /* ---------- Start ---------- */
+  async function init() {
+    bindEvents();
+    state.collator = new Intl.Collator(state.lang, {
+      sensitivity: 'base',
+      numeric: true
+    });
+    applyStaticTexts();
+    renderSelects();
+    update();
+    try {
+      const res = await fetch(CONFIG_URL, {
+        cache: 'no-cache'
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const parsed = parseConfig(await res.json());
+      state.categories = parsed.categories;
+      state.projects = parsed.projects;
+      state.skipped = parsed.skipped;
+      state.languages = [...new Set(parsed.projects.flatMap((p) => p.languages))].sort();
+      if (state.category !== 'all' && !state.categories.some((c) => c.id === state.category)) state.category = 'all';
+      if (state.sublang !== 'all' && !state.languages.includes(state.sublang)) state.sublang = 'all';
+      state.status = 'ok';
+      refreshLocalized();
+    } catch (err) {
+      console.error('[Homepage] Konfiguration konnte nicht geladen werden:', err);
+      state.status = 'error';
+    }
+    renderAll();
+  }
+  init();
+})();
